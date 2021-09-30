@@ -18,18 +18,22 @@ namespace EnhancedStreamChat.Chat
             _backgroundColorSetting.editButton.onClick.AddListener(HideSettings);
             _backgroundColorSetting.modalColorPicker.cancelEvent += ShowSettings;
             _backgroundColorSetting.CurrentColor = _chatConfig.BackgroundColor;
+
             // accent
             _accentColorSetting.editButton.onClick.AddListener(HideSettings);
             _accentColorSetting.modalColorPicker.cancelEvent += ShowSettings;
             _accentColorSetting.CurrentColor = _chatConfig.AccentColor;
+
             // highlight
             _highlightColorSetting.editButton.onClick.AddListener(HideSettings);
             _highlightColorSetting.modalColorPicker.cancelEvent += ShowSettings;
             _highlightColorSetting.CurrentColor = _chatConfig.HighlightColor;
+
             // ping
             _pingColorSetting.editButton.onClick.AddListener(HideSettings);
             _pingColorSetting.modalColorPicker.cancelEvent += ShowSettings;
             _pingColorSetting.CurrentColor = _chatConfig.PingColor;
+
             // text
             _textColorSetting.editButton.onClick.AddListener(HideSettings);
             _textColorSetting.modalColorPicker.cancelEvent += ShowSettings;
