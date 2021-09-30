@@ -12,7 +12,7 @@ namespace EnhancedStreamChat
     {
         internal static Plugin instance { get; private set; }
         internal static string Name => "EnhancedStreamChat";
-        internal static string Version => _meta.Version.ToString() ?? Assembly.GetExecutingAssembly().GetName().Version.ToString();
+        internal static string Version => _meta.HVersion.ToString();
 
         private static PluginMetadata _meta;
 
