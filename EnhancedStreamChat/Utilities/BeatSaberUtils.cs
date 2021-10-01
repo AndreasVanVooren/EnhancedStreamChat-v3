@@ -8,7 +8,7 @@ namespace EnhancedStreamChat.Utilities
     public static class BeatSaberUtils
 	{
 		private static Material? _noGlow;
-		public static Material? UINoGlowMaterial => _noGlow ??= new Material(Resources.FindObjectsOfTypeAll<Material>().Where(m => m.name == "UINoGlow").FirstOrDefault());
+		public static Material? UINoGlowMaterial => _noGlow ??= new Material(Resources.FindObjectsOfTypeAll<Material>().FirstOrDefault(m => m.name == "UINoGlow"));
 
 		private static Shader? _tmpNoGlowFontShader;
 		public static Shader? TMPNoGlowFontShader
