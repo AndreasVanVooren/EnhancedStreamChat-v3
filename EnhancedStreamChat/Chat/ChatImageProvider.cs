@@ -20,12 +20,12 @@ namespace EnhancedStreamChat.Chat
 
     public class ChatImageProvider : PersistentSingleton<ChatImageProvider>
     {
-        private ConcurrentDictionary<string, EnhancedImageInfo> _cachedImageInfo = new ConcurrentDictionary<string, EnhancedImageInfo>();
-        public ReadOnlyDictionary<string, EnhancedImageInfo> CachedImageInfo { get; internal set; }
+        private readonly ConcurrentDictionary<string, EnhancedImageInfo> _cachedImageInfo = new ConcurrentDictionary<string, EnhancedImageInfo>();
+        private readonly ConcurrentDictionary<string, ActiveDownload> _activeDownloads = new ConcurrentDictionary<string, ActiveDownload>();
+        private readonly ConcurrentDictionary<string, Texture2D> _cachedSpriteSheets = new ConcurrentDictionary<string, Texture2D>();
 
-        private ConcurrentDictionary<string, ActiveDownload> _activeDownloads = new ConcurrentDictionary<string, ActiveDownload>();
-        private ConcurrentDictionary<string, Texture2D> _cachedSpriteSheets = new ConcurrentDictionary<string, Texture2D>();
-        
+        public ReadOnlyDictionary<string, EnhancedImageInfo> CachedImageInfo { get; private set; }
+
         private void Awake()
         {
             CachedImageInfo = new ReadOnlyDictionary<string, EnhancedImageInfo>(_cachedImageInfo);
@@ -57,44 +57,42 @@ namespace EnhancedStreamChat.Chat
                 yield break;
             }
 
-            using (UnityWebRequest wr = UnityWebRequest.Get(uri))
+            using var wr = UnityWebRequest.Get(uri);
+            activeDownload = new ActiveDownload
             {
-                activeDownload = new ActiveDownload()
-                {
-                    Finally = Finally,
-                    Request = wr
-                };
-                _activeDownloads.TryAdd(uri, activeDownload);
+                Finally = Finally,
+                Request = wr
+            };
+            _activeDownloads.TryAdd(uri, activeDownload);
 
-                yield return wr.SendWebRequest();
-                if (wr.isHttpError)
-                {
-                    // Failed to download due to http error, don't retry
-                    Logger.log.Error($"An http error occurred during request to {uri}. Aborting! {wr.error}");
-                    activeDownload.Finally?.Invoke(new byte[0]);
-                    _activeDownloads.TryRemove(uri, out var d1);
-                    yield break;
-                }
-
-                if (wr.isNetworkError)
-                {
-                    if (!isRetry)
-                    {
-                        Logger.log.Error($"A network error occurred during request to {uri}. Retrying in 3 seconds... {wr.error}");
-                        yield return new WaitForSeconds(3);
-                        StartCoroutine(DownloadContent(uri, Finally, true));
-                        yield break;
-                    }
-                    activeDownload.Finally?.Invoke(new byte[0]);
-                    _activeDownloads.TryRemove(uri, out var d2);
-                    yield break;
-                }
-
-                var data = wr.downloadHandler.data;
-                activeDownload.Finally?.Invoke(data);
-                activeDownload.IsCompleted = true;
-                _activeDownloads.TryRemove(uri, out var d3);
+            yield return wr.SendWebRequest();
+            if (wr.isHttpError)
+            {
+                // Failed to download due to http error, don't retry
+                Logger.log.Error($"An http error occurred during request to {uri}. Aborting! {wr.error}");
+                activeDownload.Finally?.Invoke(Array.Empty<byte>());
+                _activeDownloads.TryRemove(uri, out var d1);
+                yield break;
             }
+
+            if (wr.isNetworkError)
+            {
+                if (!isRetry)
+                {
+                    Logger.log.Error($"A network error occurred during request to {uri}. Retrying in 3 seconds... {wr.error}");
+                    yield return new WaitForSeconds(3);
+                    StartCoroutine(DownloadContent(uri, Finally, true));
+                    yield break;
+                }
+                activeDownload.Finally?.Invoke(Array.Empty<byte>());
+                _activeDownloads.TryRemove(uri, out var d2);
+                yield break;
+            }
+
+            var data = wr.downloadHandler.data;
+            activeDownload.Finally?.Invoke(data);
+            activeDownload.IsCompleted = true;
+            _activeDownloads.TryRemove(uri, out var d3);
         }
 
         public IEnumerator PrecacheAnimatedImage(string uri, string id, int forcedHeight = -1)
@@ -105,8 +103,8 @@ namespace EnhancedStreamChat.Chat
 
         private void SetImageHeight(ref int spriteHeight, ref int spriteWidth, int height)
         {
-            float scale = 1.0f;
-            if (spriteHeight != (float)height)
+            var scale = 1.0f;
+            if (Math.Abs(spriteHeight - (float)height) > 0.01)
             {
                 scale = (float)height / spriteHeight;
             }
@@ -114,23 +112,23 @@ namespace EnhancedStreamChat.Chat
             spriteHeight = (int)(scale * spriteHeight);
         }
 
-        public IEnumerator TryCacheSingleImage(string id, string uri, bool isAnimated, Action<EnhancedImageInfo> Finally = null, int forcedHeight = -1)
+        public IEnumerator TryCacheSingleImage(string id, string uri, bool isAnimated, Action<EnhancedImageInfo>? Finally = null, int forcedHeight = -1)
         {
             if(_cachedImageInfo.TryGetValue(id, out var info))
             {
                 Finally?.Invoke(info);
                 yield break;
             }
-            byte[] bytes = new byte[0];
-            yield return DownloadContent(uri, (b) => bytes = b);
+            var bytes = Array.Empty<byte>();
+            yield return DownloadContent(uri, b => bytes = b);
             yield return OnSingleImageCached(bytes, id, isAnimated, Finally, forcedHeight);
         }
 
-        public IEnumerator OnSingleImageCached(byte[] bytes, string id, bool isAnimated, Action<EnhancedImageInfo> Finally = null, int forcedHeight = -1)
+        public IEnumerator OnSingleImageCached(byte[] bytes, string id, bool isAnimated, Action<EnhancedImageInfo?>? Finally = null, int forcedHeight = -1)
         {
             if(bytes.Length == 0)
             {
-                Finally(null);
+                Finally?.Invoke(null);
                 yield break;
             }
 
@@ -214,7 +212,7 @@ namespace EnhancedStreamChat.Chat
                 {
                     SetImageHeight(ref spriteWidth, ref spriteHeight, forcedHeight);
                 }
-                ret = new EnhancedImageInfo()
+                ret = new EnhancedImageInfo
                 {
                     ImageId = id,
                     Sprite = sprite,

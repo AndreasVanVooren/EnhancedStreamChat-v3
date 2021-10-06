@@ -130,7 +130,7 @@ namespace EnhancedStreamChat.Chat
                         continue;
                     }
                     //Logger.log.Info($"Emote: {emote.Name}, StartIndex: {emote.StartIndex}, EndIndex: {emote.EndIndex}, Len: {sb.Length}");
-                    if (!font.TryGetCharacter(replace.ImageId, out uint character))
+                    if (!font.TryGetCharacter(replace.ImageId, out var character))
                     {
                         Logger.log.Warn($"Emote {emote.Name} was missing from the character dict! Font hay have run out of usable characters.");
                         continue;
@@ -154,8 +154,8 @@ namespace EnhancedStreamChat.Chat
 
                 if (msg.IsSystemMessage)
                 {
-                    // System messages get a grayish color to differenciate them from normal messages in chat, and do not receive a username/badge prefix
-                    sb.Insert(0, $"<color=#bbbbbbbb>");
+                    // System messages get a grayish color to differentiate them from normal messages in chat, and do not receive a username/badge prefix
+                    sb.Insert(0, "<color=#bbbbbbbb>");
                     sb.Append("</color>");
                 }
                 else
@@ -172,7 +172,7 @@ namespace EnhancedStreamChat.Chat
                         sb.Insert(0, $"<color={msg.Sender.Color}><b>{msg.Sender.DisplayName}</b></color>: ");
                     }
 
-                    for (int i = 0; i < msg.Sender.Badges.Length; i++)
+                    for (var i = 0; i < msg.Sender.Badges.Length; i++)
                     {
                         // Insert user badges at the beginning of the string in reverse order
                         if (badges.TryPop(out var badge) && font.TryGetCharacter(badge.ImageId, out var character))
@@ -185,7 +185,7 @@ namespace EnhancedStreamChat.Chat
             }
             catch (Exception ex)
             {
-                Logger.log.Error($"An exception occurred in ChatMessageBuilder while parsing msg with {msg.Emotes.Length} emotes. Msg: \"{msg.Message}\". {ex.ToString()}");
+                Logger.log.Error($"An exception occurred in ChatMessageBuilder while parsing msg with {msg.Emotes.Length} emotes. Msg: \"{msg.Message}\". {ex}");
             }
             return msg.Message;
         }
