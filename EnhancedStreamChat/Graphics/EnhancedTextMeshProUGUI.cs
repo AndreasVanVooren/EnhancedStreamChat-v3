@@ -16,7 +16,7 @@ namespace EnhancedStreamChat.Graphics
         private static object _lock = new object();
         public event Action OnLatePreRenderRebuildComplete;
 
-        private static ObjectPool<EnhancedImage> _imagePool = new ObjectPool<EnhancedImage>(50,
+        private static readonly ObjectPool<EnhancedImage> ImagePool = new ObjectPool<EnhancedImage>(50,
             constructor: () =>
             {
                 var img = new GameObject().AddComponent<EnhancedImage>();
@@ -41,7 +41,7 @@ namespace EnhancedStreamChat.Graphics
                 }
                 catch(Exception ex)
                 {
-                    Logger.log.Error($"Exception while freeing EnhancedImage in EnhancedTextMeshProUGUI. {ex.ToString()}");
+                    Logger.log.Error($"Exception while freeing EnhancedImage in EnhancedTextMeshProUGUI. {ex}");
                 }
             }
         );
@@ -50,12 +50,12 @@ namespace EnhancedStreamChat.Graphics
         {
             foreach (var enhancedImage in _currentImages)
             {
-                _imagePool.Free(enhancedImage);
+                ImagePool.Free(enhancedImage);
             }
             _currentImages.Clear();
         }
 
-        private List<EnhancedImage> _currentImages = new List<EnhancedImage>();
+        private readonly List<EnhancedImage> _currentImages = new List<EnhancedImage>();
         public override void Rebuild(CanvasUpdate update)
         {
             if (update == CanvasUpdate.LatePreRender)
@@ -89,7 +89,7 @@ namespace EnhancedStreamChat.Graphics
 
                     MainThreadInvoker.Invoke(() =>
                     {
-                        var img = _imagePool.Alloc();
+                        var img = ImagePool.Alloc();
                         try
                         {
                             if (imageInfo.AnimControllerData != null)
@@ -113,7 +113,7 @@ namespace EnhancedStreamChat.Graphics
                         catch (Exception ex)
                         {
                             Logger.log.Error($"Exception while trying to overlay sprite. {ex.ToString()}");
-                            _imagePool.Free(img);
+                            ImagePool.Free(img);
                         }
                     });
                 }
