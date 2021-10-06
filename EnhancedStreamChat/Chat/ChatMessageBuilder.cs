@@ -117,7 +117,11 @@ namespace EnhancedStreamChat.Chat
                     badges.Push(badgeInfo);
                 }
 
-                StringBuilder sb = new StringBuilder(msg.Message); // Replace all instances of < with a zero-width non-breaking character
+                var sb = new StringBuilder(msg.Message); // Replace all instances of < with a zero-width non-breaking character
+
+                // Escape all html tags in the message
+                sb.Replace("<", "<\u2060");
+
                 foreach (var emote in msg.Emotes)
                 {
                     if (!ChatImageProvider.instance.CachedImageInfo.TryGetValue(emote.Id, out var replace))
@@ -147,9 +151,6 @@ namespace EnhancedStreamChat.Chat
                         Logger.log.Error($"An unknown error occurred while trying to swap emote {emote.Name} into string of length {sb.Length} at location ({emote.StartIndex}, {emote.EndIndex})");
                     }
                 }
-
-                // Escape all html tags in the message
-                sb.Replace("<", "<\u2060");
 
                 if (msg.IsSystemMessage)
                 {
