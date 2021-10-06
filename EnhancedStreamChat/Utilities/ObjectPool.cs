@@ -71,7 +71,7 @@ namespace EnhancedStreamChat.Utilities
 
 		private T InternalAlloc()
 		{
-			T newObj = _constructor is null ? new GameObject().AddComponent<T>() : _constructor.Invoke();
+			var newObj = _constructor is null ? new GameObject().AddComponent<T>() : _constructor.Invoke();
 
 			_firstAlloc?.Invoke(newObj);
 			return newObj;

@@ -16,89 +16,45 @@ namespace EnhancedStreamChat.Graphics
         private VerticalLayoutGroup _verticalLayoutGroup;
         public Vector2 Size
         {
-            get
-            {
-                return (transform as RectTransform).sizeDelta;
-            }
-            set
-            {
-                (transform as RectTransform).sizeDelta = value;
-            }
+            get => (transform as RectTransform).sizeDelta;
+            set => (transform as RectTransform).sizeDelta = value;
         }
 
         public Color AccentColor
         {
-            get
-            {
-                return _accent.color;
-            }
-            set
-            {
-                _accent.color = value;
-            }
+            get => _accent.color;
+            set => _accent.color = value;
         }
 
         public Color HighlightColor
         {
-            get
-            {
-                return _highlight.color;
-            }
-            set
-            {
-                _highlight.color = value;
-            }
+            get => _highlight.color;
+            set => _highlight.color = value;
         }
 
         public bool HighlightEnabled
         {
-            get
-            {
-                return _highlight.enabled;
-            }
+            get => _highlight.enabled;
             set
             {
                 _highlight.enabled = value;
-                if (value)
-                {
-                    _verticalLayoutGroup.padding = new RectOffset(5, 5, 2, 2);
-                }
-                else
-                {
-                    _verticalLayoutGroup.padding = new RectOffset(5, 5, 1, 1);
-                }
+                _verticalLayoutGroup.padding = value ? new RectOffset(5, 5, 2, 2) : new RectOffset(5, 5, 1, 1);
             }
         }
 
         public bool AccentEnabled
         {
-            get
-            {
-                return _accent.enabled;
-            }
-            set
-            {
-                _accent.enabled = value;
-            }
+            get => _accent.enabled;
+            set => _accent.enabled = value;
         }
 
         public bool SubTextEnabled
         {
-            get
-            {
-                return SubText.enabled;
-            }
+            get => SubText.enabled;
             set
             {
                 SubText.enabled = value;
-                if(value)
-                {
-                    SubText.rectTransform.SetParent(gameObject.transform, false);
-                }
-                else
-                {
-                    SubText.rectTransform.SetParent(null, false);
-                }
+                SubText.rectTransform.SetParent(value ? gameObject.transform : null, false);
             }
         }
 
