@@ -31,8 +31,8 @@
             <HintPath>$(BeatSaberDir)\Plugins\BS_Utils.dll</HintPath>
             <Private>false</Private>
         </Reference>
-        <Reference Include="ChatCore">
-            <HintPath>$(BeatSaberDir)\Libs\ChatCore.dll</HintPath>
+        <Reference Include="CatCore">
+            <HintPath>$(BeatSaberDir)\Libs\CatCore.dll</HintPath>
             <Private>false</Private>
         </Reference>
         <Reference Include="Hive.Versioning">

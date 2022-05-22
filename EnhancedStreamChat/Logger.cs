@@ -6,6 +6,6 @@ namespace EnhancedStreamChat
     internal static class Logger
     {
         internal static IPALogger log { get; set; }
-        internal static IPALogger cclog => log.GetChildLogger("ChatCore");
+        internal static IPALogger cclog => log.GetChildLogger("CatCore");
     }
 }

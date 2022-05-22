@@ -2,7 +2,7 @@
 using BeatSaberMarkupLanguage.FloatingScreen;
 using BeatSaberMarkupLanguage.ViewControllers;
 using BS_Utils.Utilities;
-using ChatCore.Interfaces;
+using CatCore.Interfaces;
 using EnhancedStreamChat.Graphics;
 using EnhancedStreamChat.Utilities;
 using HMUI;

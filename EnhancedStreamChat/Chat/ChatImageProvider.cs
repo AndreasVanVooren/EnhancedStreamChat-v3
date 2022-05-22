@@ -1,5 +1,5 @@
 ﻿using BeatSaberMarkupLanguage.Animations;
-using ChatCore.Models;
+using CatCore.Models;
 using EnhancedStreamChat.Graphics;
 using EnhancedStreamChat.Utilities;
 using System;

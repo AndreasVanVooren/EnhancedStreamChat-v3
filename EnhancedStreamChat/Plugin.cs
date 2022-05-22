@@ -1,8 +1,10 @@
 ﻿using System;
 using IPA;
-using IPALogger = IPA.Logging.Logger;
 using EnhancedStreamChat.Chat;
 using IPA.Loader;
+using IPAConfig = IPA.Config.Config;
+using IPA.Config.Stores;
+using IPALogger = IPA.Logging.Logger;
 
 namespace EnhancedStreamChat
 {
@@ -15,14 +17,14 @@ namespace EnhancedStreamChat
         private static PluginMetadata _meta = null!;
 
         [Init]
-        public void Init(IPALogger logger, PluginMetadata meta)
+        public void Init(IPAConfig conf, IPALogger logger, PluginMetadata meta)
         {
             _meta = meta;
 
             Logger.log = logger;
             Logger.log.Debug("Logger initialized.");
 
-            var _ = ChatConfig.instance;
+            ChatConfig.instance = conf.Generated<ChatConfig>();
         }
 
         [OnEnable]

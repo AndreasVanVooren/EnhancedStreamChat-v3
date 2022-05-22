@@ -1,9 +1,10 @@
 ﻿using BS_Utils.Utilities;
 using EnhancedStreamChat.Utilities;
-using ChatCore;
-using ChatCore.Interfaces;
-using ChatCore.Logging;
-using ChatCore.Services;
+using CatCore;
+using CatCore.Interfaces;
+using CatCore.Logging;
+using CatCore.Services;
+using CatCore.Services.Multiplexer;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -16,7 +17,7 @@ namespace EnhancedStreamChat.Chat
 {
     public class ChatManager : PersistentSingleton<ChatManager>
     {
-        internal ChatCoreInstance _sc;
+        internal CatCoreInstance _sc;
         internal ChatServiceMultiplexer _svcs;
         void Awake()
         {
@@ -26,7 +27,7 @@ namespace EnhancedStreamChat.Chat
         public override void OnEnable()
         {
             base.OnEnable();
-            _sc = ChatCoreInstance.Create();
+            _sc = CatCoreInstance.Create();
             //_sc.OnLogReceived += _sc_OnLogReceived;
             _svcs = _sc.RunAllServices();
             _svcs.OnJoinChannel += QueueOrSendOnJoinChannel;
@@ -134,7 +135,7 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
-        private void QueueOrSendMessage<A>(IChatService svc, A a, Action<IChatService, A> action)
+        private void QueueOrSendMessage<A>(MultiplexedPlatformService svc, A a, Action<MultiplexedPlatformService, A> action)
         {
             if (_chatDisplay == null || !_msgLock.Wait(50))
             {
@@ -146,7 +147,7 @@ namespace EnhancedStreamChat.Chat
                 _msgLock.Release();
             }
         }
-        private void QueueOrSendMessage<A, B>(IChatService svc, A a, B b, Action<IChatService, A, B> action)
+        private void QueueOrSendMessage<A, B>(MultiplexedPlatformService svc, A a, B b, Action<MultiplexedPlatformService, A, B> action)
         {
             if (_chatDisplay == null || !_msgLock.Wait(50))
             {
@@ -159,32 +160,32 @@ namespace EnhancedStreamChat.Chat
             }
         }
 
-        private void QueueOrSendOnChannelResourceDataCached(IChatService svc, IChatChannel channel, Dictionary<string, IChatResourceData> resources) => QueueOrSendMessage(svc, channel, resources, OnChannelResourceDataCached);
-        private void OnChannelResourceDataCached(IChatService svc, IChatChannel channel, Dictionary<string, IChatResourceData> resources)
+        private void QueueOrSendOnChannelResourceDataCached(MultiplexedPlatformService svc, MultiplexedChannel channel, Dictionary<string, IChatResourceData> resources) => QueueOrSendMessage(svc, channel, resources, OnChannelResourceDataCached);
+        private void OnChannelResourceDataCached(MultiplexedPlatformService svc, MultiplexedChannel channel, Dictionary<string, IChatResourceData> resources)
         {
             _chatDisplay.OnChannelResourceDataCached(channel, resources);
         }
 
-        private void QueueOrSendOnTextMessageReceived(IChatService svc, IChatMessage msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);
-        private void OnTextMesssageReceived(IChatService svc, IChatMessage msg)
+        private void QueueOrSendOnTextMessageReceived(MultiplexedPlatformService svc, MultiplexedMessage msg) => QueueOrSendMessage(svc, msg, OnTextMesssageReceived);
+        private void OnTextMesssageReceived(MultiplexedPlatformService svc, MultiplexedMessage msg)
         {
             _chatDisplay.OnTextMessageReceived(msg);
         }
 
-        private void QueueOrSendOnJoinChannel(IChatService svc, IChatChannel channel) => QueueOrSendMessage(svc, channel, OnJoinChannel);
-        private void OnJoinChannel(IChatService svc, IChatChannel channel)
+        private void QueueOrSendOnJoinChannel(MultiplexedPlatformService svc, MultiplexedChannel channel) => QueueOrSendMessage(svc, channel, OnJoinChannel);
+        private void OnJoinChannel(MultiplexedPlatformService svc, MultiplexedChannel channel)
         {
             _chatDisplay.OnJoinChannel(svc, channel);
         }
 
-        private void QueueOrSendOnClearMessage(IChatService svc, string messageId) => QueueOrSendMessage(svc, messageId, OnClearMessage);
-        private void OnClearMessage(IChatService svc, string messageId)
+        private void QueueOrSendOnClearMessage(MultiplexedPlatformService svc, string messageId) => QueueOrSendMessage(svc, messageId, OnClearMessage);
+        private void OnClearMessage(MultiplexedPlatformService svc, string messageId)
         {
             _chatDisplay.OnMessageCleared(messageId);
         }
 
-        private void QueueOrSendOnClearChat(IChatService svc, string userId) => QueueOrSendMessage(svc, userId, OnClearChat);
-        private void OnClearChat(IChatService svc, string userId)
+        private void QueueOrSendOnClearChat(MultiplexedPlatformService svc, MultiplexedChannel channel, string userId) => QueueOrSendMessage(svc, userId, OnClearChat);
+        private void OnClearChat(MultiplexedPlatformService svc, string userId)
         {
             _chatDisplay.OnChatCleared(userId);
         }
