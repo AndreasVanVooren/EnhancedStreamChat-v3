@@ -1,128 +1,134 @@
-﻿using BeatSaberMarkupLanguage.Animations;
+﻿using EnhancedStreamChat.Chat;
+using EnhancedStreamChat.Interfaces;
 using EnhancedStreamChat.Utilities;
-using ChatCore.Interfaces;
 using System;
-using System.Collections.Generic;
+using System.Linq;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
+using Zenject;
 
 namespace EnhancedStreamChat.Graphics
 {
     public class EnhancedTextMeshProUGUI : TextMeshProUGUI
     {
-        public IChatMessage ChatMessage { get; set; } = null;
-        public EnhancedFontInfo FontInfo { get; set; } = null;
-        private static object _lock = new object();
-        public event Action OnLatePreRenderRebuildComplete;
+        public IESCChatMessage ChatMessage { get; set; } = null;
+        public EnhancedFontInfo FontInfo => this._fontManager.FontInfo;
 
-        private static readonly ObjectPool<EnhancedImage> ImagePool = new ObjectPool<EnhancedImage>(50,
-            constructor: () =>
-            {
-                var img = new GameObject().AddComponent<EnhancedImage>();
-                DontDestroyOnLoad(img.gameObject);
-                img.color = Color.white;
-                img.rectTransform.anchorMin = new Vector2(0.5f, 0.5f);
-                img.rectTransform.anchorMax = new Vector2(0.5f, 0.5f);
-                img.rectTransform.pivot = new Vector2(0, 0);
-                img.animStateUpdater = img.gameObject.AddComponent<AnimationStateUpdater>();
-                img.animStateUpdater.image = img;
-                img.gameObject.SetActive(false);
-                return img;
-            },
-            onFree: img =>
-            {
-                try
-                {
-                    img.animStateUpdater.controllerData = null;
-                    img.gameObject.SetActive(false);
-                    img.rectTransform.SetParent(null);
-                    img.sprite = null;
-                }
-                catch(Exception ex)
-                {
-                    Logger.log.Error($"Exception while freeing EnhancedImage in EnhancedTextMeshProUGUI. {ex}");
-                }
-            }
-        );
+        private MemoryPoolContainer<EnhancedImage> _imagePool;
+        private ESCFontManager _fontManager;
+        private bool _rebuiled = false;
+        private readonly LazyCopyHashSet<ILatePreRenderRebuildReciver> _recivers = new LazyCopyHashSet<ILatePreRenderRebuildReciver>();
+        public ILazyCopyHashSet<ILatePreRenderRebuildReciver> LazyCopyHashSet => this._recivers;
+
+        public void Constract(EnhancedImage.Pool image, ESCFontManager fontManager)
+        {
+            this._imagePool = new MemoryPoolContainer<EnhancedImage>(image);
+            this._fontManager = fontManager;
+        }
+
+        protected override void Awake()
+        {
+            base.Awake();
+            this.raycastTarget = false;
+        }
 
         public void ClearImages()
         {
-            foreach (var enhancedImage in _currentImages)
-            {
-                ImagePool.Free(enhancedImage);
-            }
-            _currentImages.Clear();
-        }
-
-        private readonly List<EnhancedImage> _currentImages = new List<EnhancedImage>();
-        public override void Rebuild(CanvasUpdate update)
-        {
-            if (update == CanvasUpdate.LatePreRender)
-            {
-                MainThreadInvoker.Invoke(() =>
-                {
-                    ClearImages();
-
-                });
-                for (int i = 0; i < textInfo.characterCount; i++)
-                {
-                    TMP_CharacterInfo c = textInfo.characterInfo[i];
-                    if (!c.isVisible || string.IsNullOrEmpty(text) || c.index >= text.Length)
-                    {
-                        // Skip invisible/empty/out of range chars
-                        continue;
-                    }
-
-                    uint character = text[c.index];
-                    if(c.index + 1 < text.Length && char.IsSurrogatePair(text[c.index], text[c.index + 1]))
-                    {
-                        // If it's a surrogate pair, convert the character
-                        character = (uint)char.ConvertToUtf32(text[c.index], text[c.index + 1]);
-                    }
-
-                    if (FontInfo == null || !FontInfo.TryGetImageInfo(character, out var imageInfo) || imageInfo is null)
-                    {
-                        // Skip characters that have no imageInfo registered
-                        continue;
-                    }
-
-                    MainThreadInvoker.Invoke(() =>
-                    {
-                        var img = ImagePool.Alloc();
-                        try
-                        {
-                            if (imageInfo.AnimControllerData != null)
-                            {
-                                img.animStateUpdater.controllerData = imageInfo.AnimControllerData;
-                                img.sprite = imageInfo.AnimControllerData.sprites[imageInfo.AnimControllerData.uvIndex];
-                            }
-                            else
-                            {
-                                img.sprite = imageInfo.Sprite;
-                            }
-                            img.material = BeatSaberUtils.UINoGlowMaterial;
-                            img.rectTransform.localScale = new Vector3(fontScale * 1.08f, fontScale * 1.08f, fontScale * 1.08f);
-                            img.rectTransform.sizeDelta = new Vector2(imageInfo.Width, imageInfo.Height);
-                            img.rectTransform.SetParent(rectTransform, false);
-                            img.rectTransform.localPosition = c.topLeft - new Vector3(0, imageInfo.Height * fontScale * 0.558f / 2);
-                            img.rectTransform.localRotation = Quaternion.identity;
-                            img.gameObject.SetActive(true);
-                            _currentImages.Add(img);
-                        }
-                        catch (Exception ex)
-                        {
-                            Logger.log.Error($"Exception while trying to overlay sprite. {ex.ToString()}");
-                            ImagePool.Free(img);
-                        }
-                    });
+            try {
+                while (this._imagePool?.activeItems != null && this._imagePool?.activeItems.Any() == true) {
+                    this._imagePool?.Despawn(this._imagePool.activeItems[0]);
                 }
             }
-            base.Rebuild(update);
-            if (update == CanvasUpdate.LatePreRender)
-            {
-                MainThreadInvoker.Invoke(OnLatePreRenderRebuildComplete);
+            catch (Exception e) {
+                Logger.Error(e);
             }
+        }
+
+        public override void Rebuild(CanvasUpdate update)
+        {
+            switch (update) {
+                case CanvasUpdate.LatePreRender:
+                    MainThreadInvoker.Invoke(() =>
+                    {
+                        this.ClearImages();
+                        for (var i = 0; i < this.textInfo.characterCount; i++) {
+                            var c = this.textInfo.characterInfo[i];
+                            if (!c.isVisible || string.IsNullOrEmpty(this.text) || c.index >= this.text.Length) {
+                                // Skip invisible/empty/out of range chars
+                                continue;
+                            }
+
+                            uint character = this.text[c.index];
+                            if (c.index + 1 < this.text.Length && char.IsSurrogatePair(this.text[c.index], this.text[c.index + 1])) {
+                                // If it's a surrogate pair, convert the character
+                                character = (uint)char.ConvertToUtf32(this.text[c.index], this.text[c.index + 1]);
+                            }
+                            if (this.FontInfo == null || !this.FontInfo.TryGetImageInfo(character, out var imageInfo) || imageInfo is null) {
+                                //Logger.Debug($"{c.character}:{character}, Skip characters that have no imageInfo registered");
+                                continue;
+                            }
+                            var img = this._imagePool?.Spawn();
+                            if (img == null) {
+                                continue;
+                            }
+                            try {
+                                img.rectTransform.SetParent(this.rectTransform, false);
+                                if (imageInfo.AnimControllerData != null) {
+                                    img.AnimStateUpdater.controllerData = imageInfo.AnimControllerData;
+                                    img.sprite = imageInfo.AnimControllerData.sprites[imageInfo.AnimControllerData.uvIndex];
+                                }
+                                else {
+                                    img.sprite = imageInfo.Sprite;
+                                }
+                                img.rectTransform.localScale = new Vector3(this.fontScale * 1.08f, this.fontScale * 1.08f, this.fontScale * 1.08f);
+                                img.rectTransform.sizeDelta = new Vector2(imageInfo.Width, imageInfo.Height);
+                                img.rectTransform.localPosition = c.topLeft - new Vector3(0, imageInfo.Height * this.fontScale * 0.558f / 2);
+                                img.rectTransform.localRotation = Quaternion.identity;
+                                img.material = BeatSaberUtils.UINoGlowMaterial;
+                                img.SetAllDirty();
+                            }
+                            catch (Exception ex) {
+                                Logger.Error($"Exception while trying to overlay sprite. {ex}");
+                                this._imagePool?.Despawn(img);
+                            }
+                        }
+                        this._rebuiled = true;
+                    });
+                    break;
+                case CanvasUpdate.Prelayout:
+                case CanvasUpdate.Layout:
+                case CanvasUpdate.PostLayout:
+                case CanvasUpdate.PreRender:
+                case CanvasUpdate.MaxUpdateValue:
+                default:
+                    break;
+            }
+            base.Rebuild(update);
+        }
+
+        public void AddReciver(ILatePreRenderRebuildReciver reciver)
+        {
+            this.LazyCopyHashSet.Add(reciver);
+        }
+
+        public void RemoveReciver(ILatePreRenderRebuildReciver reciver)
+        {
+            this.LazyCopyHashSet.Remove(reciver);
+        }
+
+        protected void LateUpdate()
+        {
+            if (this._rebuiled) {
+                foreach (var reciver in this._recivers.items) {
+                    reciver?.LatePreRenderRebuildHandler(this, EventArgs.Empty);
+                }
+                this._rebuiled = false;
+            }
+        }
+
+        public class Factory : PlaceholderFactory<EnhancedTextMeshProUGUI>
+        {
         }
     }
 }
